@@ -6,7 +6,6 @@ const compression = require('compression');
 const taskRoutes = require('./routes/taskRoutes');
 const { errorHandler } = require('./middlewares/errorHandler');
 const logger = require('./config/logger');
-const rateLimiter = require('./middlewares/rateLimiter');
 const { testConnection } = require('./config/database');
 
 const app = express();
@@ -67,7 +66,7 @@ app.use((req, res, next) => {
 // ===========================================
 // Rate Limiting (Applied to API routes)
 // ===========================================
-app.use('/api', rateLimiter);
+app.use('/api');
 
 // ===========================================
 // Health Check Endpoint
