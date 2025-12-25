@@ -25,7 +25,7 @@ class TasksNotifier extends Notifier<List<Task>> {
 
   Future<void> createTask(Task task) async {
     try {
-      final newTask = await _taskService.createTask(task);
+      final newTask = await _taskService.createTask(task.title);
       state = [...state, newTask];
     } catch (e) {
       // Handle error

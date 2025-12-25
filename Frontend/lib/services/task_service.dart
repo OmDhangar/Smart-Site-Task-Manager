@@ -1,11 +1,12 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/task.dart';
 
 class TaskService {
-  final String _baseUrl = 'http://localhost:3000/api';
-  final String _apiKey = 'your_secret_api_key_here';
+  final String _baseUrl = dotenv.env['API_BASE_URL']!;
+  final String _apiKey = dotenv.env['API_KEY']!;
 
   Future<List<Task>> fetchTasks() async {
     try {
@@ -27,27 +28,30 @@ class TaskService {
     }
   }
 
-  Future<Task> createTask(Task task) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/tasks'),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': _apiKey,
-        },
-        body: json.encode(task.toJson()),
-      );
+  Future<Task> createTask(String title) async {
+      try {
+        final response = await http.post(
+          Uri.parse('$_baseUrl/tasks'),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': _apiKey,
+          },
+          body: json.encode({
+            'title': title, // ONLY required field
+          }),
+        );
 
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        return Task.fromJson(data['data']['task']);
-      } else {
-        throw Exception('Failed to create task');
+        if (response.statusCode == 201) {
+          final data = json.decode(response.body);
+          return Task.fromJson(data['data']['task']);
+        } else {
+          throw Exception(response.body);
+        }
+      } catch (e) {
+        throw Exception('Failed to connect to the server');
       }
-    } catch (e) {
-      throw Exception('Failed to connect to the server');
     }
-  }
+
 
   Future<Task> updateTask(Task task) async {
     try {
