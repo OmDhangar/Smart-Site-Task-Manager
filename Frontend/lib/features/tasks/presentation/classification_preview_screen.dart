@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod_todo_app/features/tasks/data/models/task_preview.dart';
 import 'package:flutter_riverpod_todo_app/features/tasks/presentation/task_detail_screen.dart';
+import 'package:flutter_riverpod_todo_app/providers/task_provider.dart';
 
-class ClassificationPreviewScreen extends StatelessWidget {
-  const ClassificationPreviewScreen({super.key});
+class ClassificationPreviewScreen extends ConsumerWidget {
+  final TaskPreview preview;
+  final String originalText;
+
+  const ClassificationPreviewScreen({super.key, required this.preview, required this.originalText});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -23,13 +28,36 @@ class ClassificationPreviewScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDropdown('Category', ['Work', 'Personal']),
+                    Text('Category', style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16161A),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(preview.category, style: const TextStyle(color: Colors.white)),
+                    ),
                     const SizedBox(height: 16),
-                    _buildDropdown('Priority', ['High', 'Medium', 'Low']),
+                    Text('Priority', style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16161A),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(preview.priority, style: const TextStyle(color: Colors.white)),
+                    ),
                     const SizedBox(height: 16),
-                    _buildChipsSection('Entities', ['Oct 24', 'Jira']),
+                    _buildChipsSection('Entities', [
+                      ...preview.entities.dates,
+                      ...preview.entities.people,
+                      ...preview.entities.locations,
+                      ...preview.entities.topics,
+                    ].where((e) => e.isNotEmpty).toList()),
                     const SizedBox(height: 16),
-                    _buildChipsSection('Suggested Actions', ['Schedule meeting', 'Open Jira']),
+                    _buildChipsSection('Suggested Actions', preview.suggestedActions),
                   ],
                 ),
               ),
@@ -53,11 +81,20 @@ class ClassificationPreviewScreen extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const TaskDetailScreen()),
-                      );
+                    onPressed: () async {
+                      // Create the task using the notifier which updates the list state
+                      final created = await ref.read(tasksProvider.notifier).createTask(originalText, confirm: true);
+                      if (created != null) {
+                        if (context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => TaskDetailScreen(task: created)),
+                          );
+                        }
+                      } else {
+                        // show error
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to create task')));
+                      }
                     },
                      style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -90,24 +127,6 @@ class ClassificationPreviewScreen extends StatelessWidget {
           child: child,
         ),
       ),
-    );
-  }
-
-  Widget _buildDropdown(String title, List<String> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 16)),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: items.first,
-          items: items.map((item) {
-            return DropdownMenuItem(value: item, child: Text(item));
-          }).toList(),
-          onChanged: (value) {},
-          decoration: const InputDecoration(),
-        ),
-      ],
     );
   }
 

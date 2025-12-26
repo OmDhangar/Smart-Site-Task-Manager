@@ -1,87 +1,47 @@
-
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter_riverpod_todo_app/core/network/dio_client.dart';
 import '../models/task.dart';
 
+/// Backwards-compatible wrapper (not used by default) that delegates to `DioClient`.
+/// This avoids duplicated hardcoded URLs and keys.
 class TaskService {
-  final String _baseUrl = 'http://localhost:3000/api';
-  final String _apiKey = 'your_secret_api_key_here';
+  final DioClient _dioClient = DioClient();
 
   Future<List<Task>> fetchTasks() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/tasks'),
-        headers: {'x-api-key': _apiKey},
-      );
+    final response = await _dioClient.get('/api/tasks');
+    final body = response.data;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return (data['data']['tasks'] as List)
-            .map((task) => Task.fromJson(task))
-            .toList();
-      } else {
-        throw Exception('Failed to load tasks');
-      }
-    } catch (e) {
-      throw Exception('Failed to connect to the server');
+    if (body == null || body['success'] != true) {
+      throw Exception(body != null && body['message'] != null ? body['message'] : 'Failed to load tasks');
     }
+
+    return (body['data']?['tasks'] as List? ?? [])
+        .map((t) => Task.fromJson(t as Map<String, dynamic>))
+        .toList();
   }
 
   Future<Task> createTask(Task task) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/tasks'),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': _apiKey,
-        },
-        body: json.encode(task.toJson()),
-      );
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        return Task.fromJson(data['data']['task']);
-      } else {
-        throw Exception('Failed to create task');
-      }
-    } catch (e) {
-      throw Exception('Failed to connect to the server');
+    final response = await _dioClient.post('/api/tasks', data: task.toJson());
+    final body = response.data;
+    if (body == null || body['success'] != true) {
+      throw Exception(body != null && body['message'] != null ? body['message'] : 'Failed to create task');
     }
+    return Task.fromJson(body['data']?['task']);
   }
 
   Future<Task> updateTask(Task task) async {
-    try {
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/tasks/${task.id}'),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': _apiKey,
-        },
-        body: json.encode(task.toJson()),
-      );
-
-      if (response.statusCode == 200) {
-        return task;
-      } else {
-        throw Exception('Failed to update task');
-      }
-    } catch (e) {
-      throw Exception('Failed to connect to the server');
+    final response = await _dioClient.patch('/api/tasks/${task.id}', data: task.toJson());
+    final body = response.data;
+    if (body == null || body['success'] != true) {
+      throw Exception(body != null && body['message'] != null ? body['message'] : 'Failed to update task');
     }
+    return Task.fromJson(body['data']?['task'] ?? {});
   }
 
   Future<void> deleteTask(String id) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$_baseUrl/tasks/$id'),
-        headers: {'x-api-key': _apiKey},
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to delete task');
-      }
-    } catch (e) {
-      throw Exception('Failed to connect to the server');
+    final response = await _dioClient.delete('/api/tasks/$id');
+    final body = response.data;
+    if (body == null || body['success'] != true) {
+      throw Exception(body != null && body['message'] != null ? body['message'] : 'Failed to delete task');
     }
   }
 }

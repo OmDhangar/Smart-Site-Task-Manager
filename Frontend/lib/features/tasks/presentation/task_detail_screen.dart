@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod_todo_app/features/tasks/presentation/widgets/audit_history_timeline.dart';
+import 'package:flutter_riverpod_todo_app/models/task.dart';
 
 class TaskDetailScreen extends StatelessWidget {
-  const TaskDetailScreen({super.key});
+  final Task task;
+  const TaskDetailScreen({super.key, required this.task});
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +27,9 @@ class TaskDetailScreen extends StatelessWidget {
           children: [
             _buildMetadataSection(),
             const SizedBox(height: 24),
-            _buildChipsSection('Extracted entities', ['Oct 24', 'Jira']),
+            _buildChipsSection('Extracted entities', _entitiesList()),
             const SizedBox(height: 24),
-            _buildChipsSection('Suggested actions', ['Schedule meeting', 'Open Jira']),
+            _buildChipsSection('Suggested actions', task.suggestedActions ?? []),
             const SizedBox(height: 24),
             const Text('Audit History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
@@ -36,6 +38,22 @@ class TaskDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<String> _entitiesList() {
+    final map = task.extractedEntities ?? {};
+    final List<String> items = [];
+    void addList(String key) {
+      final list = (map[key] as List?)?.map((e) => e.toString()).toList() ?? [];
+      items.addAll(list);
+    }
+
+    addList('dates');
+    addList('people');
+    addList('locations');
+    addList('keywords');
+
+    return items;
   }
 
   Widget _buildMetadataSection() {
