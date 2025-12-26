@@ -16,6 +16,7 @@ class ClassificationPreviewScreen extends ConsumerStatefulWidget {
 
 class _ClassificationPreviewScreenState extends ConsumerState<ClassificationPreviewScreen> {
   late String _category;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -99,16 +100,39 @@ class _ClassificationPreviewScreenState extends ConsumerState<ClassificationPrev
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: () async {
-                  final created = await ref.read(tasksProvider.notifier).createTask(widget.originalText, confirm: true);
-                  if (created != null && context.mounted) {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => TaskDetailScreen(task: created)));
-                  } else {
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to create task')));
-                  }
-                },
+                onPressed: _saving
+                    ? null
+                    : () async {
+                        setState(() => _saving = true);
+                        final created = await ref
+                            .read(tasksProvider.notifier)
+                            .createTask(widget.originalText, confirm: true);
+                        if (!context.mounted) return;
+                        setState(() => _saving = false);
+                        if (created != null) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TaskDetailScreen(task: created),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Failed to create task')),
+                          );
+                        }
+                      },
                 style: ElevatedButton.styleFrom(backgroundColor: accent, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                child: const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Text('Confirm & Save')),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: _saving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Confirm & Save'),
+                ),
               ),
             )
           ])

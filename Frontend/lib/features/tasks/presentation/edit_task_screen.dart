@@ -15,6 +15,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   String? _category;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -32,14 +33,26 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
   }
 
   Future<void> _save() async {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Title cannot be empty')),
+      );
+      return;
+    }
+
+    if (_saving) return;
+    setState(() => _saving = true);
+
     final updates = {
-      if (_titleController.text.trim().isNotEmpty) 'title': _titleController.text.trim(),
-      if (_descController.text.trim().isNotEmpty) 'description': _descController.text.trim(),
+      'title': title,
+      'description': _descController.text.trim(),
       'category': _category ?? widget.task.category,
     };
 
     await ref.read(tasksProvider.notifier).updateTask(widget.task.id, updates);
     if (!context.mounted) return;
+    setState(() => _saving = false);
     Navigator.pop(context);
   }
 
@@ -72,8 +85,14 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _save,
-              child: const Text('Save Changes'),
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save Changes'),
             ),
           ],
         ),
