@@ -1,5 +1,6 @@
 # Smart Site Task Manager - Backend API
 
+
 ## 📋 Project Overview
 A sophisticated task management backend system that automatically classifies, prioritizes, and organizes tasks using intelligent keyword analysis and entity extraction. Built with production-grade architecture, comprehensive error handling, and extensive testing.
 
@@ -122,8 +123,8 @@ DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
 SUPABASE_URL=https://[PROJECT].supabase.co
 SUPABASE_KEY=your_supabase_anon_key
 
-# Security
-API_KEY=your_secret_api_key_here
+# Security(this is the API key used to authenticate requests for the deployed link)
+API_KEY=OD24formeAPIKey!
 
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=900000
