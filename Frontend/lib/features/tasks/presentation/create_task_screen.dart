@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod_todo_app/features/tasks/presentation/classification_preview_screen.dart';
-import 'package:flutter_riverpod_todo_app/features/tasks/domain/repositories/task_repository.dart';
+import 'package:flutter_riverpod_todo_app/features/tasks/data/models/task_preview.dart';
 import 'package:flutter_riverpod_todo_app/features/tasks/data/repositories/task_providers.dart';
 
 class CreateTaskScreen extends ConsumerStatefulWidget {
@@ -14,7 +14,6 @@ class CreateTaskScreen extends ConsumerStatefulWidget {
 class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
   final _controller = TextEditingController();
   bool _loading = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -25,70 +24,71 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
   Future<void> _analyze() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
+    setState(() => _loading = true);
     try {
       final repo = ref.read(taskRepositoryProvider);
-      final preview = await repo.getTaskPreview(text);
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ClassificationPreviewScreen(preview: preview, originalText: text)),
-      );
+      final previewFuture = repo.getTaskPreview(text);
+      final delayFuture = Future.delayed(const Duration(seconds: 2));
+      final results = await Future.wait([previewFuture, delayFuture]);
+      final preview = results[0] as TaskPreview;
+      if (!context.mounted) return;
+      Navigator.push(context, MaterialPageRoute(builder: (c) => ClassificationPreviewScreen(preview: preview, originalText: text)));
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Analyze failed: ${e.toString()}')));
     } finally {
-      setState(() {
-        _loading = false;
-      });
+      if (context.mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.secondary;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         title: const Text('Create Task'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: Stack(children: [
+        Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(children: [
             Expanded(
               child: TextField(
                 controller: _controller,
-                maxLines: null,
                 expands: true,
+                maxLines: null,
                 textAlignVertical: TextAlignVertical.top,
+                style: const TextStyle(color: Colors.white, fontSize: 18),
                 decoration: const InputDecoration(
                   hintText: 'Describe your task in plain English...',
+                  hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 24),
+                  border: InputBorder.none,
                 ),
               ),
             ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
-              ),
-            const SizedBox(height: 16),
-            ElevatedButton(
+            const SizedBox(height: 100),
+          ]),
+        ),
+        Positioned(
+          left: 20,
+          right: 20,
+          bottom: 20,
+          child: SafeArea(
+            child: ElevatedButton(
               onPressed: _loading ? null : _analyze,
               style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: _loading ? const CircularProgressIndicator.adaptive() : const Text('Analyze Task'),
+              child: _loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator()) : const Text('Analyze Task'),
             ),
-          ],
-        ),
-      ),
+          ),
+        )
+      ]),
     );
   }
 }

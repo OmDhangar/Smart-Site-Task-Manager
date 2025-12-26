@@ -45,12 +45,27 @@ class TasksNotifier extends Notifier<List<Task>> {
     }
   }
 
-  Future<void> deleteTask(String id) async {
+  /// Deletes a task and returns the removed Task so callers can offer undo.
+  Future<Task?> deleteTask(String id) async {
+    final idx = state.indexWhere((t) => t.id == id);
+    if (idx == -1) return null;
+    final removed = state[idx];
+
+    // Optimistically remove
+    state = state.where((task) => task.id != id).toList();
+
     try {
       await _taskRepository.deleteTask(id);
-      state = state.where((task) => task.id != id).toList();
+      return removed;
     } catch (e) {
-      // Handle error
+      // Revert on error
+      state = [removed, ...state];
+      return null;
     }
+  }
+
+  /// Restores a previously removed task locally (used by Undo).
+  void restoreTask(Task task) {
+    state = [task, ...state];
   }
 }

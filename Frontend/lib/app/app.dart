@@ -13,7 +13,7 @@ class FlutterRiverpodTodoApp extends ConsumerWidget {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.dark,
       routerConfig: route,
     );
   }
