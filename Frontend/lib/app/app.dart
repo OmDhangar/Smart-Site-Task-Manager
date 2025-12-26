@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod_todo_app/config/config.dart';
-import 'package:riverpod/src/framework.dart';
+import 'package:flutter_riverpod_todo_app/core/theme/app_theme.dart';
 
 class FlutterRiverpodTodoApp extends ConsumerWidget {
   const FlutterRiverpodTodoApp({super.key});
 
-  ProviderListenable get routesProvider => null;
+  static final routesProvider = Provider<RouterConfig<Object>?>((ref) => null);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -14,7 +13,7 @@ class FlutterRiverpodTodoApp extends ConsumerWidget {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.dark,
       routerConfig: route,
     );
   }

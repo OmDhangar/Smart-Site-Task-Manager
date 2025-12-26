@@ -1,37 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod_todo_app/models/task.dart';
+import 'package:flutter_riverpod_todo_app/providers/task_provider.dart';
 
-class EditTaskScreen extends StatelessWidget {
-  const EditTaskScreen({super.key});
+class EditTaskScreen extends ConsumerStatefulWidget {
+  final Task task;
+  const EditTaskScreen({super.key, required this.task});
+
+  @override
+  ConsumerState<EditTaskScreen> createState() => _EditTaskScreenState();
+}
+
+class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
+  late TextEditingController _titleController;
+  late TextEditingController _descController;
+  String? _category;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.task.title);
+    _descController = TextEditingController(text: widget.task.description ?? '');
+    _category = widget.task.category;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final updates = {
+      if (_titleController.text.trim().isNotEmpty) 'title': _titleController.text.trim(),
+      if (_descController.text.trim().isNotEmpty) 'description': _descController.text.trim(),
+      'category': _category ?? widget.task.category,
+    };
+
+    await ref.read(tasksProvider.notifier).updateTask(widget.task.id, updates);
+    if (!context.mounted) return;
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0E0E10),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Edit Task', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF0E0E10),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       ),
-      body: const Padding(
-        padding: EdgeInsets.all(16.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             TextField(
-              decoration: InputDecoration(
+              controller: _titleController,
+              decoration: const InputDecoration(
                 labelText: 'Title',
                 labelStyle: TextStyle(color: Colors.white70),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
-              decoration: InputDecoration(
-                labelText: 'Category',
+              controller: _descController,
+              decoration: const InputDecoration(
+                labelText: 'Description',
                 labelStyle: TextStyle(color: Colors.white70),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: null,
-              child: Text('Save Changes'),
+              onPressed: _save,
+              child: const Text('Save Changes'),
             ),
           ],
         ),

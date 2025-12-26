@@ -42,20 +42,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: ListTile(
                     title: Text(task.title),
-                    subtitle: Text(task.description),
+                    subtitle: Text(task.description ?? ''),
                     trailing: Checkbox(
-                      value: task.status == 'completed',
+                      value: task.status == Status.completed,
                       onChanged: (value) {
-                        ref.read(tasksProvider.notifier).updateTask(
-                              Task(
-                                id: task.id,
-                                title: task.title,
-                                description: task.description,
-                                category: task.category,
-                                priority: task.priority,
-                                status: value! ? 'completed' : 'pending',
-                              ),
-                            );
+                        // Update status via repository (send only changed fields)
+                        ref.read(tasksProvider.notifier).updateTask(task.id, {
+                          'status': value! ? 'completed' : 'pending',
+                        });
                       },
                     ),
                   ),
@@ -97,16 +91,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           TextButton(
             onPressed: () {
-              ref.read(tasksProvider.notifier).createTask(
-                    Task(
-                      id: '0', // The backend will generate the id
-                      title: titleController.text,
-                      description: descriptionController.text,
-                      category: 'General',
-                      priority: 'medium',
-                      status: 'pending',
-                    ),
-                  );
+              ref.read(tasksProvider.notifier).createTask(titleController.text);
               Navigator.of(context).pop();
             },
             child: const Text('Create'),

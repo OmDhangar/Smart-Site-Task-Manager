@@ -1,144 +1,231 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod_todo_app/features/tasks/presentation/create_task_screen.dart';
+import 'package:flutter_riverpod_todo_app/models/task.dart';
+import 'package:flutter_riverpod_todo_app/providers/task_provider.dart';
+import 'package:flutter_riverpod_todo_app/features/tasks/presentation/task_detail_screen.dart';
+import 'package:flutter_riverpod_todo_app/features/tasks/presentation/edit_task_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(tasksProvider.notifier).fetchTasks();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final tasks = ref.watch(tasksProvider);
+    final accent = Theme.of(context).colorScheme.secondary;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {},
-        ),
-        title: const Text('My Tasks'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_outlined),
-            onPressed: () {},
-          ),
-        ],
+        leading: IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
+        title: const Text('Tasks'),
+        actions: [IconButton(icon: const Icon(Icons.notifications_none_outlined), onPressed: () {})],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildFilterChips(),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 4, // Placeholder
-              itemBuilder: (context, index) {
-                return const TaskCard();
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateTaskScreen()),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16),
-      child: Row(
-        children: [
-          ChoiceChip(
-            label: const Text('All'),
-            selected: true,
-            onSelected: (selected) {},
-            backgroundColor: Colors.transparent,
-            selectedColor: const Color(0xFF22D4A7),
-            labelStyle: const TextStyle(color: Colors.white),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: Color(0xFF22D4A7)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          ChoiceChip(
-            label: const Text('Work'),
-            selected: false,
-            onSelected: (selected) {},
-             backgroundColor: Colors.transparent,
-            labelStyle: const TextStyle(color: Colors.white),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: Colors.grey),
-            ),
-          ),
-          const SizedBox(width: 8),
-          ChoiceChip(
-            label: const Text('Personal'),
-            selected: false,
-            onSelected: (selected) {},
-             backgroundColor: Colors.transparent,
-            labelStyle: const TextStyle(color: Colors.white),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: Colors.grey),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class TaskCard extends StatelessWidget {
-  const TaskCard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Premium Task',
-              style: TextStyle(color: Color(0xFF22D4A7), fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Finalize Q3 architectural diagrams',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text('WORK', style: TextStyle(color: Colors.purple, fontSize: 10)),
-                ),
-                const SizedBox(width: 8),
-                const Icon(Icons.circle, color: Colors.yellow, size: 8),
-                const SizedBox(width: 4),
-                const Text('Priority', style: TextStyle(color: Colors.white70)),
-                const Spacer(),
-                const Text('Oct 24', style: TextStyle(color: Colors.white70)),
-              ],
+            _buildFilterChips(context),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView.separated(
+                itemCount: tasks.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final task = tasks[index];
+                  return Dismissible(
+                    key: ValueKey(task.id),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      color: Colors.red.withOpacity(0.9),
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                    onDismissed: (_) async {
+                      final removed = await ref.read(tasksProvider.notifier).deleteTask(task.id);
+                      if (!context.mounted) return;
+                      final messenger = ScaffoldMessenger.of(context);
+                      messenger.showSnackBar(SnackBar(
+                        content: const Text('Task deleted'),
+                        backgroundColor: Theme.of(context).cardColor,
+                        action: SnackBarAction(
+                          label: 'Undo',
+                          textColor: Theme.of(context).colorScheme.secondary,
+                          onPressed: () {
+                            if (removed != null) ref.read(tasksProvider.notifier).restoreTask(removed);
+                          },
+                        ),
+                      ));
+                    },                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => TaskDetailScreen(task: task)));
+                      },
+                      onLongPress: () {
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: Theme.of(context).cardColor,
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+                          builder: (ctx) {
+                            return SafeArea(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.edit, color: Colors.white),
+                                    title: const Text('Edit task', style: TextStyle(color: Colors.white)),
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      Navigator.push(ctx, MaterialPageRoute(builder: (_) => EditTaskScreen(task: task)));
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.delete, color: Color(0xFFFF8A80)),
+                                    title: const Text('Delete task', style: TextStyle(color: Colors.white)),
+                                    onTap: () async {
+                                      Navigator.pop(ctx);
+                                      final removed = await ref.read(tasksProvider.notifier).deleteTask(task.id);
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                        content: const Text('Task deleted'),
+                                        backgroundColor: Theme.of(context).cardColor,
+                                        action: SnackBarAction(
+                                          label: 'Undo',
+                                          textColor: Theme.of(context).colorScheme.secondary,
+                                          onPressed: () {
+                                            if (removed != null) ref.read(tasksProvider.notifier).restoreTask(removed);
+                                          },
+                                        ),
+                                      ));
+                                    },
+                                  ),
+                                ]),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      child: PremiumTaskCard(task: task, accent: accent),
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Theme.of(context).colorScheme.secondary,
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateTaskScreen()));
+        },
+        child: const Icon(Icons.add, color: Colors.black),
+      ),
     );
+  }
+
+  Widget _buildFilterChips(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.secondary;
+    return Row(children: [
+      ChoiceChip(
+        label: const Text('All'),
+        selected: true,
+        onSelected: (_) {},
+        backgroundColor: Colors.transparent,
+        selectedColor: accent,
+        labelStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: accent)),
+      ),
+      const SizedBox(width: 8),
+      ChoiceChip(
+        label: const Text('Work'),
+        selected: false,
+        onSelected: (_) {},
+        backgroundColor: Colors.transparent,
+        labelStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey)),
+      ),
+      const SizedBox(width: 8),
+      ChoiceChip(
+        label: const Text('Personal'),
+        selected: false,
+        onSelected: (_) {},
+        backgroundColor: Colors.transparent,
+        labelStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey)),
+      ),
+    ]);
+  }
+}
+
+class PremiumTaskCard extends StatelessWidget {
+  final Task task;
+  final Color accent;
+
+  const PremiumTaskCard({super.key, required this.task, required this.accent});
+
+  Color _priorityColor(Priority priority) {
+    switch (priority) {
+      case Priority.high:
+        return Colors.red;
+      case Priority.medium:
+        return Colors.yellow;
+      case Priority.low:
+      default:
+        return Colors.green;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context).textTheme.titleLarge!.copyWith(fontSize: 16, fontWeight: FontWeight.w600);
+    final metaStyle = Theme.of(context).textTheme.bodyLarge;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(task.title, style: titleStyle, maxLines: 2, overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 12),
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: accent.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(task.category.toUpperCase(), style: TextStyle(color: accent)),
+          ),
+          const SizedBox(width: 12),
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: _priorityColor(task.priority), shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Text('Priority', style: metaStyle),
+          const Spacer(),
+          Text(task.dueDate != null ? _formatDate(task.dueDate!) : '', style: Theme.of(context).textTheme.bodySmall),
+        ])
+      ]),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][date.month - 1];
+    return '$month ${date.day}';
   }
 }
