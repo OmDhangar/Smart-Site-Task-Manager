@@ -36,9 +36,10 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<Task> createTask(String taskText, bool confirm) async {
+  Future<Task> createTask(String title, String description, {bool confirm = true}) async {
     final response = await _dioClient.post('/api/tasks', data: {
-      'title': taskText,
+      'title': title,
+      'description': description,
       if (confirm) 'confirm': true,
     });
 

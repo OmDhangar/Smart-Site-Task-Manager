@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod_todo_app/features/tasks/data/models/task_preview.dart';
 import 'package:flutter_riverpod_todo_app/features/tasks/presentation/task_detail_screen.dart';
-import 'package:flutter_riverpod_todo_app/providers/task_provider.dart';
+import 'package:flutter_riverpod_todo_app/models/task.dart';
 
 class ClassificationPreviewScreen extends ConsumerStatefulWidget {
-  final TaskPreview preview;
-  final String originalText;
-  const ClassificationPreviewScreen({super.key, required this.preview, required this.originalText});
+  final Task task;
+
+  const ClassificationPreviewScreen({
+    super.key,
+    required this.task,
+  });
 
   @override
   ConsumerState<ClassificationPreviewScreen> createState() => _ClassificationPreviewScreenState();
@@ -16,12 +18,11 @@ class ClassificationPreviewScreen extends ConsumerStatefulWidget {
 
 class _ClassificationPreviewScreenState extends ConsumerState<ClassificationPreviewScreen> {
   late String _category;
-  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _category = widget.preview.category.isEmpty ? 'Work' : widget.preview.category;
+    _category = widget.task.category.isEmpty ? 'Work' : widget.task.category;
   }
 
   @override
@@ -68,7 +69,7 @@ class _ClassificationPreviewScreenState extends ConsumerState<ClassificationPrev
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(12)),
-                        child: Text(widget.preview.priority, style: const TextStyle(color: Colors.white)),
+                        child: Text(widget.task.priority.name, style: const TextStyle(color: Colors.white)),
                       ),
                       const SizedBox(height: 16),
                       if (_entitiesList().isNotEmpty) ...[
@@ -77,10 +78,22 @@ class _ClassificationPreviewScreenState extends ConsumerState<ClassificationPrev
                         Wrap(spacing: 8, runSpacing: 8, children: _entitiesList().map((e) => Chip(label: Text(e), backgroundColor: Theme.of(context).cardColor, labelStyle: const TextStyle(color: Colors.white))).toList()),
                         const SizedBox(height: 16),
                       ],
-                      if ((widget.preview.suggestedActions).isNotEmpty) ...[
+                      if ((widget.task.suggestedActions ?? []).isNotEmpty) ...[
                         const Text('Suggested Actions', style: TextStyle(color: Colors.white70, fontSize: 14)),
                         const SizedBox(height: 8),
-                        Wrap(spacing: 8, runSpacing: 8, children: widget.preview.suggestedActions.map((a) => Chip(label: Text(a), backgroundColor: Theme.of(context).cardColor, labelStyle: const TextStyle(color: Colors.white))).toList()),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: (widget.task.suggestedActions ?? [])
+                              .map(
+                                (a) => Chip(
+                                  label: Text(a),
+                                  backgroundColor: Theme.of(context).cardColor,
+                                  labelStyle: const TextStyle(color: Colors.white),
+                                ),
+                              )
+                              .toList(),
+                        ),
                       ],
                     ]),
                   ),
@@ -100,38 +113,18 @@ class _ClassificationPreviewScreenState extends ConsumerState<ClassificationPrev
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: _saving
-                    ? null
-                    : () async {
-                        setState(() => _saving = true);
-                        final created = await ref
-                            .read(tasksProvider.notifier)
-                            .createTask(widget.originalText, confirm: true);
-                        if (!context.mounted) return;
-                        setState(() => _saving = false);
-                        if (created != null) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => TaskDetailScreen(task: created),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to create task')),
-                          );
-                        }
-                      },
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TaskDetailScreen(task: widget.task),
+                    ),
+                  );
+                },
                 style: ElevatedButton.styleFrom(backgroundColor: accent, foregroundColor: Colors.black, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: _saving
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Confirm & Save'),
+                  child: const Text('View Task'),
                 ),
               ),
             )
@@ -142,12 +135,19 @@ class _ClassificationPreviewScreenState extends ConsumerState<ClassificationPrev
   }
 
   List<String> _entitiesList() {
-    final e = widget.preview.entities;
-    return [
-      ...e.dates,
-      ...e.people,
-      ...e.locations,
-      ...e.topics,
-    ].where((s) => s.isNotEmpty).toList();
+    final map = widget.task.extractedEntities ?? {};
+    final List<String> items = [];
+
+    void addList(String key) {
+      final list = (map[key] as List?)?.map((e) => e.toString()).toList() ?? [];
+      items.addAll(list);
+    }
+
+    addList('dates');
+    addList('people');
+    addList('locations');
+    addList('keywords');
+
+    return items;
   }
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod_todo_app/features/tasks/presentation/classification_preview_screen.dart';
-import 'package:flutter_riverpod_todo_app/features/tasks/data/models/task_preview.dart';
-import 'package:flutter_riverpod_todo_app/features/tasks/data/repositories/task_providers.dart';
+import 'package:flutter_riverpod_todo_app/providers/task_provider.dart';
 
 class CreateTaskScreen extends ConsumerStatefulWidget {
   const CreateTaskScreen({super.key});
@@ -12,29 +11,52 @@ class CreateTaskScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
-  final _controller = TextEditingController();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
   bool _loading = false;
 
   @override
   void dispose() {
-    _controller.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
   Future<void> _analyze() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a task title')),
+      );
+      return;
+    }
+
     setState(() => _loading = true);
     try {
-      final repo = ref.read(taskRepositoryProvider);
-      final previewFuture = repo.getTaskPreview(text);
-      final delayFuture = Future.delayed(const Duration(seconds: 2));
-      final results = await Future.wait([previewFuture, delayFuture]);
-      final preview = results[0] as TaskPreview;
+      final created = await ref
+          .read(tasksProvider.notifier)
+          .createTask(title, description, confirm: true);
       if (!context.mounted) return;
-      Navigator.push(context, MaterialPageRoute(builder: (c) => ClassificationPreviewScreen(preview: preview, originalText: text)));
+      if (created != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (c) => ClassificationPreviewScreen(task: created),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to create task')),
+        );
+      }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Analyze failed: ${e.toString()}')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Analyze failed: ${e.toString()}')),
+        );
+      }
     } finally {
       if (context.mounted) setState(() => _loading = false);
     }
@@ -54,16 +76,30 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
         Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(children: [
+            // Title field
+            TextField(
+              controller: _titleController,
+              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+              decoration: const InputDecoration(
+                hintText: 'Task title',
+                hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 20),
+                border: InputBorder.none,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: Color(0xFF2A2A2A)),
+            const SizedBox(height: 16),
+            // Description field
             Expanded(
               child: TextField(
-                controller: _controller,
+                controller: _descriptionController,
                 expands: true,
                 maxLines: null,
                 textAlignVertical: TextAlignVertical.top,
                 style: const TextStyle(color: Colors.white, fontSize: 18),
                 decoration: const InputDecoration(
                   hintText: 'Describe your task in plain English...',
-                  hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 24),
+                  hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 18),
                   border: InputBorder.none,
                 ),
               ),
@@ -84,7 +120,9 @@ class _CreateTaskScreenState extends ConsumerState<CreateTaskScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: _loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator()) : const Text('Analyze Task'),
+              child: _loading
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator())
+                  : const Text('Analyze Task'),
             ),
           ),
         )

@@ -60,8 +60,10 @@ class TasksNotifier extends Notifier<TasksState> {
     }
   }
 
-  Future<Task?> createTask(String title, {bool confirm = true}) async {
+  Future<Task?> createTask(String title, String description, {bool confirm = true}) async {
     final sanitizedTitle = _sanitizeInput(title);
+    final sanitizedDescription = _sanitizeInput(description, maxLength: 1000);
+    
     if (sanitizedTitle.isEmpty) {
       state = state.copyWith(errorMessage: 'Task title cannot be empty.');
       return null;
@@ -69,7 +71,7 @@ class TasksNotifier extends Notifier<TasksState> {
 
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final newTask = await _taskRepository.createTask(sanitizedTitle, confirm);
+      final newTask = await _taskRepository.createTask(sanitizedTitle, sanitizedDescription, confirm: confirm);
       state = state.copyWith(
         tasks: [...state.tasks, newTask],
         isLoading: false,

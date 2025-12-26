@@ -47,127 +47,134 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Expanded(
               child: Stack(
                 children: [
-                  if (tasks.isEmpty && !tasksState.isLoading)
-                    const Center(
-                      child: Text(
-                        'No tasks yet.\nCreate your first task to get started.',
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  else
-                    ListView.separated(
-                      itemCount: tasks.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        return Dismissible(
-                          key: ValueKey(task.id),
-                          direction: DismissDirection.endToStart,
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            color: Colors.red.withOpacity(0.9),
-                            child: const Icon(Icons.delete, color: Colors.white),
-                          ),
-                          onDismissed: (_) async {
-                            final removed = await ref.read(tasksProvider.notifier).deleteTask(task.id);
-                            if (!context.mounted) return;
-                            final messenger = ScaffoldMessenger.of(context);
-                            messenger.showSnackBar(SnackBar(
-                              content: const Text('Task deleted'),
-                              backgroundColor: Theme.of(context).cardColor,
-                              action: SnackBarAction(
-                                label: 'Undo',
-                                textColor: Theme.of(context).colorScheme.secondary,
-                                onPressed: () {
-                                  if (removed != null) {
-                                    ref.read(tasksProvider.notifier).restoreTask(removed);
-                                  }
-                                },
-                              ),
-                            ));
-                          },
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => TaskDetailScreen(task: task),
-                                ),
-                              );
-                            },
-                            onLongPress: () {
-                              showModalBottomSheet(
-                                context: context,
-                                backgroundColor: Theme.of(context).cardColor,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
-                                  ),
-                                ),
-                                builder: (ctx) {
-                                  return SafeArea(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          ListTile(
-                                            leading: const Icon(Icons.edit, color: Colors.white),
-                                            title: const Text(
-                                              'Edit task',
-                                              style: TextStyle(color: Colors.white),
-                                            ),
-                                            onTap: () {
-                                              Navigator.pop(ctx);
-                                              Navigator.push(
-                                                ctx,
-                                                MaterialPageRoute(
-                                                  builder: (_) => EditTaskScreen(task: task),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                          ListTile(
-                                            leading: const Icon(Icons.delete, color: Color(0xFFFF8A80)),
-                                            title: const Text(
-                                              'Delete task',
-                                              style: TextStyle(color: Colors.white),
-                                            ),
-                                            onTap: () async {
-                                              Navigator.pop(ctx);
-                                              final removed =
-                                                  await ref.read(tasksProvider.notifier).deleteTask(task.id);
-                                              if (!context.mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: const Text('Task deleted'),
-                                                  backgroundColor: Theme.of(context).cardColor,
-                                                  action: SnackBarAction(
-                                                    label: 'Undo',
-                                                    textColor: Theme.of(context).colorScheme.secondary,
-                                                    onPressed: () {
-                                                      if (removed != null) {
-                                                        ref.read(tasksProvider.notifier).restoreTask(removed);
-                                                      }
-                                                    },
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                            child: PremiumTaskCard(task: task, accent: accent),
+                  // Always render ListView to avoid layout issues
+                  ListView.separated(
+                    itemCount: tasks.isEmpty && !tasksState.isLoading ? 1 : tasks.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      // Show empty state message when no tasks
+                      if (tasks.isEmpty && !tasksState.isLoading) {
+                        return const SizedBox(
+                          height: 200,
+                          child: Center(
+                            child: Text(
+                              'No tasks yet.\nCreate your first task to get started.',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         );
-                      },
-                    ),
+                      }
+                      
+                      final task = tasks[index];
+                      return Dismissible(
+                        key: ValueKey(task.id),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          color: Colors.red.withOpacity(0.9),
+                          child: const Icon(Icons.delete, color: Colors.white),
+                        ),
+                        onDismissed: (_) async {
+                          final removed = await ref.read(tasksProvider.notifier).deleteTask(task.id);
+                          if (!context.mounted) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          messenger.showSnackBar(SnackBar(
+                            content: const Text('Task deleted'),
+                            backgroundColor: Theme.of(context).cardColor,
+                            action: SnackBarAction(
+                              label: 'Undo',
+                              textColor: Theme.of(context).colorScheme.secondary,
+                              onPressed: () {
+                                if (removed != null) {
+                                  ref.read(tasksProvider.notifier).restoreTask(removed);
+                                }
+                              },
+                            ),
+                          ));
+                        },
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TaskDetailScreen(task: task),
+                              ),
+                            );
+                          },
+                          onLongPress: () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Theme.of(context).cardColor,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                              ),
+                              builder: (ctx) {
+                                return SafeArea(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        ListTile(
+                                          leading: const Icon(Icons.edit, color: Colors.white),
+                                          title: const Text(
+                                            'Edit task',
+                                            style: TextStyle(color: Colors.white),
+                                          ),
+                                          onTap: () {
+                                            Navigator.pop(ctx);
+                                            Navigator.push(
+                                              ctx,
+                                              MaterialPageRoute(
+                                                builder: (_) => EditTaskScreen(task: task),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        ListTile(
+                                          leading: const Icon(Icons.delete, color: Color(0xFFFF8A80)),
+                                          title: const Text(
+                                            'Delete task',
+                                            style: TextStyle(color: Colors.white),
+                                          ),
+                                          onTap: () async {
+                                            Navigator.pop(ctx);
+                                            final removed =
+                                                await ref.read(tasksProvider.notifier).deleteTask(task.id);
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: const Text('Task deleted'),
+                                                backgroundColor: Theme.of(context).cardColor,
+                                                action: SnackBarAction(
+                                                  label: 'Undo',
+                                                  textColor: Theme.of(context).colorScheme.secondary,
+                                                  onPressed: () {
+                                                    if (removed != null) {
+                                                      ref.read(tasksProvider.notifier).restoreTask(removed);
+                                                    }
+                                                  },
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          child: PremiumTaskCard(task: task, accent: accent),
+                        ),
+                      );
+                    },
+                  ),
+                  // Loading overlay
                   if (tasksState.isLoading)
                     const Positioned.fill(
                       child: IgnorePointer(
@@ -177,9 +184,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     ),
+                  // Error message banner
                   if (tasksState.errorMessage != null && !tasksState.isLoading)
-                    Align(
-                      alignment: Alignment.topCenter,
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

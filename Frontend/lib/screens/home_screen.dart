@@ -91,7 +91,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           TextButton(
             onPressed: () {
-              ref.read(tasksProvider.notifier).createTask(titleController.text);
+              ref.read(tasksProvider.notifier).createTask(
+                    titleController.text,
+                    descriptionController.text,
+                  );
               Navigator.of(context).pop();
             },
             child: const Text('Create'),
